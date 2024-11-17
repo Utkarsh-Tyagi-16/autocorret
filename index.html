@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart AutoCorrect</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background">
+        <main class="container">
+            <header class="header">
+                <h1>Smart AutoCorrect</h1>
+                <p class="description">Type naturally, we'll help perfect your text.</p>
+            </header>
+
+            <div class="editor-container">
+                <div class="editor-wrapper">
+                    <textarea 
+                        id="inputBox" 
+                        placeholder="Start typing your text here..." 
+                        rows="6"
+                        spellcheck="false"
+                    ></textarea>
+                    <div class="character-count">
+                        <span id="currentCount">0</span>
+                        <span class="separator">/</span>
+                        <span id="maxCount">500</span>
+                    </div>
+                </div>
+
+                <ul id="suggestions" class="suggestions-container"></ul>
+            </div>
+
+            <div class="actions">
+                <button id="clearBtn" class="button button-secondary">
+                    Clear Text
+                </button>
+                <button id="copyBtn" class="button button-primary">
+                    Copy to Clipboard
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const inputBox = document.getElementById('inputBox');
+        const suggestionsBox = document.getElementById('suggestions');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const currentCount = document.getElementById('currentCount');
+        const maxCount = document.getElementById('maxCount');
+
+        let currentWord = '';
+        const MAX_CHARS = 500;
+
+        // Update character count
+        function updateCharCount() {
+            const count = inputBox.value.length;
+            currentCount.textContent = count;
+            if (count >= MAX_CHARS) {
+                currentCount.classList.add('text-danger');
+            } else {
+                currentCount.classList.remove('text-danger');
+            }
+        }
+
+        // Fetch suggestions from backend
+        async function fetchSuggestions(word) {
+            if (!word || word.length < 2) {
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:5000/autocorrect?word=${word}`);
+                const suggestions = await response.json();
+
+                suggestionsBox.innerHTML = '';
+                
+                suggestions.forEach(suggestion => {
+                    const li = document.createElement('li');
+                    li.className = 'suggestion-item';
+                    li.textContent = suggestion;
+                    li.onclick = () => replaceCurrentWord(suggestion);
+                    suggestionsBox.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Error fetching suggestions:', error);
+            }
+        }
+
+        // Replace current word with suggestion
+        function replaceCurrentWord(suggestion) {
+            const text = inputBox.value;
+            const lastIndex = text.lastIndexOf(currentWord);
+            if (lastIndex !== -1) {
+                inputBox.value = text.substring(0, lastIndex) + suggestion + ' ';
+            }
+            suggestionsBox.innerHTML = '';
+            inputBox.focus();
+        }
+
+        // Event Listeners
+        inputBox.addEventListener('input', (e) => {
+            updateCharCount();
+            const text = e.target.value;
+            const words = text.split(/\s+/);
+            currentWord = words[words.length - 1];
+            fetchSuggestions(currentWord);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            inputBox.value = '';
+            suggestionsBox.innerHTML = '';
+            updateCharCount();
+            inputBox.focus();
+        });
+
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(inputBox.value);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy to Clipboard';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text:', err);
+            }
+        });
+
+        // Initialize character count
+        updateCharCount();
+    </script>
+</body>
+</html>

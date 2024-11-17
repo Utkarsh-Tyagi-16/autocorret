@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autocorrect Web App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background">
+        <div class="container">
+            <h1>Autocorrect Keyboard</h1>
+            <textarea id="text-input" rows="6" placeholder="Start typing here..."></textarea>
+            <p class="output-label hidden" id="output-label">Corrected Text:</p>
+            <div id="output" class="hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        const inputField = document.getElementById("text-input");
+        const outputLabel = document.getElementById("output-label");
+
+        inputField.addEventListener("keydown", async (event) => {
+            if (event.code === "Space") {
+                event.preventDefault();
+
+                const text = inputField.value;
+                const words = text.trim().split(" ");
+                const lastWord = words[words.length - 1];
+
+                if (lastWord) {
+                    const response = await fetch("/autocorrect", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ word: lastWord }),
+                    });
+
+                    const data = await response.json();
+                    const correctedWord = data.corrected || lastWord;
+
+                    words[words.length - 1] = correctedWord;
+                    inputField.value = words.join(" ") + " ";
+                    outputLabel.classList.remove("hidden");
+                }
+            }
+        });
+    </script>
+</body>
+</html>
